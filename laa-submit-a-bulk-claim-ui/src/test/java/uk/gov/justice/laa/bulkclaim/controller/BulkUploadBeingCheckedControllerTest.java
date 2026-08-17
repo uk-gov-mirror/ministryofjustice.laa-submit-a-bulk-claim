@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.EnumSource.Mode;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -21,17 +22,24 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.assertj.MockMvcTester;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
+import org.springframework.web.reactive.function.client.WebClientResponseException.NotFound;
 import reactor.core.publisher.Mono;
+import uk.gov.justice.laa.bulkclaim.client.DataClaimsRestClient;
 import uk.gov.justice.laa.bulkclaim.exception.SubmitBulkClaimException;
 import uk.gov.justice.laa.bulkclaim.metrics.BulkClaimMetricService;
 import uk.gov.justice.laa.dstew.payments.claimsdata.model.BulkSubmissionStatus;
 import uk.gov.justice.laa.dstew.payments.claimsdata.model.GetBulkSubmissionStatusById200Response;
+import uk.gov.justice.laa.dstew.payments.claimsdata.model.SubmissionResponse;
+import uk.gov.justice.laa.dstew.payments.claimsdata.model.SubmissionStatus;
 
 @WebMvcTest(BulkUploadBeingCheckedController.class)
 @AutoConfigureMockMvc
 public class BulkUploadBeingCheckedControllerTest extends BaseControllerTest {
 
-  @Autowired private MockMvcTester mockMvc;
+  @Autowired
+  private MockMvcTester mockMvc;
+
+  @MockitoBean private DataClaimsRestClient dataClaimsRestClient;
 
   @MockitoBean private BulkClaimMetricService bulkClaimMetricService;
 
@@ -52,11 +60,11 @@ public class BulkUploadBeingCheckedControllerTest extends BaseControllerTest {
           .thenReturn(
               Mono.just(GetBulkSubmissionStatusById200Response.builder().status(status).build()));
       assertThat(
-              mockMvc.perform(
-                  get("/upload-is-being-checked")
-                      .with(oidcLogin().oidcUser(ControllerTestHelper.getOidcUser()))
-                      .sessionAttr(SUBMISSION_ID, submissionId)
-                      .sessionAttr(BULK_SUBMISSION_ID, bulkSubmissionId)))
+          mockMvc.perform(
+              get("/upload-is-being-checked")
+                  .with(oidcLogin().oidcUser(ControllerTestHelper.getOidcUser()))
+                  .sessionAttr(SUBMISSION_ID, submissionId)
+                  .sessionAttr(BULK_SUBMISSION_ID, bulkSubmissionId)))
           .hasStatusOk()
           .hasViewName("pages/upload-being-checked");
     }
@@ -79,11 +87,11 @@ public class BulkUploadBeingCheckedControllerTest extends BaseControllerTest {
                   null));
 
       assertThat(
-              mockMvc.perform(
-                  get("/upload-is-being-checked")
-                      .with(oidcLogin().oidcUser(ControllerTestHelper.getOidcUser()))
-                      .sessionAttr(SUBMISSION_ID, submissionId)
-                      .sessionAttr(BULK_SUBMISSION_ID, bulkSubmissionId)))
+          mockMvc.perform(
+              get("/upload-is-being-checked")
+                  .with(oidcLogin().oidcUser(ControllerTestHelper.getOidcUser()))
+                  .sessionAttr(SUBMISSION_ID, submissionId)
+                  .sessionAttr(BULK_SUBMISSION_ID, bulkSubmissionId)))
           .hasStatusOk()
           .hasViewName("pages/upload-being-checked");
     }
@@ -102,11 +110,11 @@ public class BulkUploadBeingCheckedControllerTest extends BaseControllerTest {
           .thenReturn(
               Mono.just(GetBulkSubmissionStatusById200Response.builder().status(status).build()));
       assertThat(
-              mockMvc.perform(
-                  get("/upload-is-being-checked")
-                      .with(oidcLogin().oidcUser(ControllerTestHelper.getOidcUser()))
-                      .sessionAttr(SUBMISSION_ID, submissionId)
-                      .sessionAttr(BULK_SUBMISSION_ID, bulkSubmissionId)))
+          mockMvc.perform(
+              get("/upload-is-being-checked")
+                  .with(oidcLogin().oidcUser(ControllerTestHelper.getOidcUser()))
+                  .sessionAttr(SUBMISSION_ID, submissionId)
+                  .sessionAttr(BULK_SUBMISSION_ID, bulkSubmissionId)))
           .hasStatus3xxRedirection()
           .hasRedirectedUrl("/submission/5933fc67-bac7-4f48-81ed-61c8c463f054");
     }
@@ -122,11 +130,11 @@ public class BulkUploadBeingCheckedControllerTest extends BaseControllerTest {
           .thenThrow(new WebClientResponseException(statusCode, "Error", null, null, null, null));
 
       assertThat(
-              mockMvc.perform(
-                  get("/upload-is-being-checked")
-                      .with(oidcLogin().oidcUser(ControllerTestHelper.getOidcUser()))
-                      .sessionAttr(SUBMISSION_ID, submissionId)
-                      .sessionAttr(BULK_SUBMISSION_ID, bulkSubmissionId)))
+          mockMvc.perform(
+              get("/upload-is-being-checked")
+                  .with(oidcLogin().oidcUser(ControllerTestHelper.getOidcUser()))
+                  .sessionAttr(SUBMISSION_ID, submissionId)
+                  .sessionAttr(BULK_SUBMISSION_ID, bulkSubmissionId)))
           .failure()
           .hasCauseInstanceOf(SubmitBulkClaimException.class)
           .hasMessageContaining("Claims API returned an error");
@@ -145,11 +153,11 @@ public class BulkUploadBeingCheckedControllerTest extends BaseControllerTest {
                       .status(BulkSubmissionStatus.PARSING_FAILED)
                       .build()));
       assertThat(
-              mockMvc.perform(
-                  get("/upload-is-being-checked")
-                      .with(oidcLogin().oidcUser(ControllerTestHelper.getOidcUser()))
-                      .sessionAttr(SUBMISSION_ID, submissionId)
-                      .sessionAttr(BULK_SUBMISSION_ID, bulkSubmissionId)))
+          mockMvc.perform(
+              get("/upload-is-being-checked")
+                  .with(oidcLogin().oidcUser(ControllerTestHelper.getOidcUser()))
+                  .sessionAttr(SUBMISSION_ID, submissionId)
+                  .sessionAttr(BULK_SUBMISSION_ID, bulkSubmissionId)))
           .failure()
           .hasCauseInstanceOf(SubmitBulkClaimException.class)
           .hasMessageContaining("Bulk submission parsing failed for: " + bulkSubmissionId);
@@ -168,15 +176,82 @@ public class BulkUploadBeingCheckedControllerTest extends BaseControllerTest {
                       .status(BulkSubmissionStatus.UNAUTHORISED)
                       .build()));
       assertThat(
-              mockMvc.perform(
-                  get("/upload-is-being-checked")
-                      .with(oidcLogin().oidcUser(ControllerTestHelper.getOidcUser()))
-                      .sessionAttr(SUBMISSION_ID, submissionId)
-                      .sessionAttr(BULK_SUBMISSION_ID, bulkSubmissionId)))
+          mockMvc.perform(
+              get("/upload-is-being-checked")
+                  .with(oidcLogin().oidcUser(ControllerTestHelper.getOidcUser()))
+                  .sessionAttr(SUBMISSION_ID, submissionId)
+                  .sessionAttr(BULK_SUBMISSION_ID, bulkSubmissionId)))
           .failure()
           .hasCauseInstanceOf(SubmitBulkClaimException.class)
           .hasMessageContaining(
               "Unexpected bulk submission status returned for: " + bulkSubmissionId);
+    }
+  }
+
+  @Nested
+  @DisplayName("GET: /submission/{submissionId}/status")
+  class IsSubmissionDoneEndpoint {
+
+    @ParameterizedTest
+    @EnumSource(value = SubmissionStatus.class, names = {"VALIDATION_SUCCEEDED",
+        "VALIDATION_FAILED", "READY_FOR_SUBMISSION"})
+    void shouldReturnTrueWhenSubmissionStatusReady(SubmissionStatus status) {
+      UUID submissionId = UUID.fromString("5933fc67-bac7-4f48-81ed-61c8c463f054");
+      SubmissionResponse response = SubmissionResponse.builder()
+          .submissionId(submissionId)
+          .status(status)
+          .build();
+      when(dataClaimsRestClient.getSubmission(submissionId))
+          .thenReturn(Mono.just(response));
+      assertThat(
+          mockMvc.perform(
+              get("/submission/{submissionId}/status", submissionId)
+                  .with(oidcLogin().oidcUser(ControllerTestHelper.getOidcUser()))))
+          .hasStatusOk()
+          .hasBodyTextEqualTo("true");
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = SubmissionStatus.class, names = {"VALIDATION_SUCCEEDED",
+        "VALIDATION_FAILED", "READY_FOR_SUBMISSION"}, mode = Mode.EXCLUDE)
+    void shouldReturnFalseWhenSubmissionStatusNotReady(SubmissionStatus status) {
+      UUID submissionId = UUID.fromString("5933fc67-bac7-4f48-81ed-61c8c463f054");
+      SubmissionResponse response = SubmissionResponse.builder()
+          .submissionId(submissionId)
+          .status(status)
+          .build();
+      when(dataClaimsRestClient.getSubmission(submissionId))
+          .thenReturn(Mono.just(response));
+      assertThat(
+          mockMvc.perform(
+              get("/submission/{submissionId}/status", submissionId)
+                  .with(oidcLogin().oidcUser(ControllerTestHelper.getOidcUser()))))
+          .hasStatusOk()
+          .hasBodyTextEqualTo("false");
+    }
+
+    @Test
+    void shouldReturnFalseWhenApiReturnsNull(){
+      UUID submissionId = UUID.fromString("5933fc67-bac7-4f48-81ed-61c8c463f054");
+      when(dataClaimsRestClient.getSubmission(submissionId))
+          .thenThrow(new WebClientResponseException(404, "Not found", null, null, null));
+      assertThat(
+          mockMvc.perform(
+              get("/submission/{submissionId}/status", submissionId)
+                  .with(oidcLogin().oidcUser(ControllerTestHelper.getOidcUser()))))
+          .hasStatus(404);
+    }
+
+    @Test
+    void shouldReturnFalseWhenUnknownException(){
+      UUID submissionId = UUID.fromString("5933fc67-bac7-4f48-81ed-61c8c463f054");
+      when(dataClaimsRestClient.getSubmission(submissionId))
+          .thenThrow(new RuntimeException("Something wrong"));
+      assertThat(
+          mockMvc.perform(
+              get("/submission/{submissionId}/status", submissionId)
+                  .with(oidcLogin().oidcUser(ControllerTestHelper.getOidcUser()))))
+          .hasStatus(404);
     }
   }
 }
