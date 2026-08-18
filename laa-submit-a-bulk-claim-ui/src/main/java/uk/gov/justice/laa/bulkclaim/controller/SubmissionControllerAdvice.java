@@ -34,10 +34,12 @@ public class SubmissionControllerAdvice {
   public SubmissionResponse getSubmission(
       @AuthenticationPrincipal OidcUser oidcUser,
       @PathVariable(name = SUBMISSION_ID, required = false) UUID submissionIdFromPath,
-      @RequestParam(name = SUBMISSION_ID, required = false) UUID submissionIdFromQueryParam) {
+      @RequestParam(name = SUBMISSION_ID, required = false) UUID submissionIdFromQueryParam,
+      @ModelAttribute(name = SUBMISSION_ID) UUID submissionIdFromModelAttribute) {
     var submissionId =
         Optional.ofNullable(submissionIdFromPath)
             .or(() -> Optional.ofNullable(submissionIdFromQueryParam))
+            .or(() -> Optional.ofNullable(submissionIdFromModelAttribute))
             .orElseThrow(
                 () -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing submissionId"));
 
