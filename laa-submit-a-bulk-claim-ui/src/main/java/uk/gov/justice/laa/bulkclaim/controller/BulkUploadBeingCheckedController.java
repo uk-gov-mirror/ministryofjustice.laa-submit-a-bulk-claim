@@ -6,11 +6,15 @@ import static uk.gov.justice.laa.bulkclaim.constants.SessionConstants.SUBMISSION
 import static uk.gov.justice.laa.bulkclaim.constants.SessionConstants.UPLOADED_FILENAME;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.core.oidc.user.OidcUser;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.Assert;
@@ -19,8 +23,10 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.SessionAttributes;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
+import org.springframework.web.server.ResponseStatusException;
 import uk.gov.justice.laa.bulkclaim.client.DataClaimsRestClient;
 import uk.gov.justice.laa.bulkclaim.exception.SubmitBulkClaimException;
+import uk.gov.justice.laa.bulkclaim.util.OidcAttributeUtils;
 import uk.gov.justice.laa.dstew.payments.claimsdata.model.BulkSubmissionStatus;
 import uk.gov.justice.laa.dstew.payments.claimsdata.model.GetBulkSubmissionStatusById200Response;
 import uk.gov.justice.laa.dstew.payments.claimsdata.model.SubmissionResponse;
@@ -33,6 +39,7 @@ import uk.gov.justice.laa.dstew.payments.claimsdata.model.SubmissionStatus;
 public class BulkUploadBeingCheckedController {
 
   private final DataClaimsRestClient dataClaimsRestClient;
+  private final OidcAttributeUtils oidcAttributeUtils;
 
   private final List<BulkSubmissionStatus> completedStatuses =
       List.of(
@@ -80,21 +87,35 @@ public class BulkUploadBeingCheckedController {
         return "pages/upload-being-checked";
       }
       throw new SubmitBulkClaimException("Claims API returned an error", e);
+    } catch (ResponseStatusException e) {
+      throw e;
     }
   }
 
   @GetMapping("/submission/{submissionId}/status")
-  public ResponseEntity<Boolean> isSubmissionDone(@PathVariable UUID submissionId) {
-    // TODO: Check office code to see if user is allowed to see this submission. Coming in future
-    // PR via Controller Advice
+  public ResponseEntity<Boolean> isSubmissionDone(
+      @PathVariable UUID submissionId, @AuthenticationPrincipal OidcUser oidcUser) {
     try {
+      Optional<SubmissionResponse> submissionResponse =
+          dataClaimsRestClient.getSubmission(submissionId).blockOptional();
+
+      // This specifically does not use the SubmissionControllerAdvice. This is due to the advice
+      //  expecting a submission to be found 100% of the time, however this may not be the case
+      //  initially for a submission that has not been created yet so doing the office code check
+      //  here instead so handle a 404 submission.
+      if (submissionResponse.isPresent()) {
+        var offices = oidcAttributeUtils.getUserOffices(oidcUser);
+        if (!offices.contains(submissionResponse.get().getOfficeAccountNumber())) {
+          throw new ResponseStatusException(
+              HttpStatus.FORBIDDEN,
+              "User does not have access to office %s"
+                  .formatted(submissionResponse.get().getOfficeAccountNumber()));
+        }
+      }
+
       SubmissionStatus submissionStatus =
-          dataClaimsRestClient
-              .getSubmission(submissionId)
-              .blockOptional()
-              .map(SubmissionResponse::getStatus)
-              .orElse(SubmissionStatus.CREATED);
-      log.info("Submission status: {}", submissionStatus);
+          submissionResponse.map(SubmissionResponse::getStatus).orElse(SubmissionStatus.CREATED);
+      log.debug("Submission status: {}", submissionStatus);
       return ResponseEntity.ok(
           List.of(
                   SubmissionStatus.VALIDATION_SUCCEEDED,
@@ -103,6 +124,8 @@ public class BulkUploadBeingCheckedController {
               .contains(submissionStatus));
     } catch (WebClientResponseException e) {
       return new ResponseEntity<>(false, e.getStatusCode());
+    } catch (ResponseStatusException e) {
+      throw e;
     } catch (Exception e) {
       log.error("Unexpected error occurred while checking submission status", e);
       return new ResponseEntity<>(false, HttpStatusCode.valueOf(404));
