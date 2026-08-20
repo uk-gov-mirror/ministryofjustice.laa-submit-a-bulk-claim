@@ -613,7 +613,7 @@ class ClaimDetailsViewTest extends SubmissionDetailsViewTestBase {
         .thenReturn(
             new SubmissionClaimsDetails(
                 List.of(SubmissionClaimRow.builder().build()), pagination, BigDecimal.ONE));
-    when(submissionMessagesBuilder.build(any(), any(), any(), anyInt(), anyInt(), any()))
+    when(submissionMessagesBuilder.build(any(), any(), any(), any(), anyInt(), anyInt(), any()))
         .thenReturn(new MessagesSummary(List.of(), 0, 0, pagination, MessagesSource.CLAIM));
   }
 
@@ -641,7 +641,7 @@ class ClaimDetailsViewTest extends SubmissionDetailsViewTestBase {
         .thenReturn(
             new SubmissionClaimsDetails(
                 List.of(SubmissionClaimRow.builder().build()), claimPagination, BigDecimal.ONE));
-    when(submissionMessagesBuilder.build(any(), any(), any(), anyInt(), anyInt(), any()))
+    when(submissionMessagesBuilder.build(any(), any(), any(), any(), anyInt(), anyInt(), any()))
         .thenReturn(
             new MessagesSummary(
                 List.of(

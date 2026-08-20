@@ -74,7 +74,7 @@ class SubmissionServiceTest {
             .build();
     when(dataClaimsRestClient.getSubmission(SUBMISSION_ID)).thenReturn(Mono.just(submission));
     when(oidcUser.getAttributes()).thenReturn(Map.of("LAA_ACCOUNTS", List.of("Different")));
-    when(oidcUser.getSubject()).thenReturn("1234567890");
+    when(oidcUser.getAttribute("oid")).thenReturn("1234567890");
 
     var exception =
         assertThrows(
